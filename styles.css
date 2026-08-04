@@ -204,6 +204,8 @@ main { background: var(--cream); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .reveal { opacity: 1; transform: none; }
+  .reveal { transition-duration: .55s; transform: translateY(12px); }
+  .venue__slide { transition: opacity .75s ease, transform 3.4s linear; }
+  .cover.opening .cover__content { animation-duration: .68s; }
+  .cover.opening .cover__wipe { animation-duration: 1.22s; }
 }

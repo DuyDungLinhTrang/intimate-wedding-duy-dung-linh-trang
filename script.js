@@ -7,13 +7,12 @@ function openInvitation() {
   invitationOpened = true;
   cover.classList.add('opening');
   cover.setAttribute('aria-disabled', 'true');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.setTimeout(() => cover.classList.add('revealing'), reducedMotion ? 0 : 720);
+  window.setTimeout(() => cover.classList.add('revealing'), 720);
   window.setTimeout(() => {
     body.classList.remove('locked');
     cover.setAttribute('aria-hidden', 'true');
     cover.removeAttribute('tabindex');
-  }, reducedMotion ? 20 : 1220);
+  }, 1220);
 }
 
 cover.addEventListener('click', openInvitation);
@@ -47,7 +46,7 @@ function showNextVenueSlide() {
 }
 
 function startVenueSlideshow() {
-  if (venueTimer || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (venueTimer) return;
   venueTimer = window.setInterval(showNextVenueSlide, 3000);
 }
 
