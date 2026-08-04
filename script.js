@@ -1,6 +1,26 @@
 const body = document.body;
 const cover = document.querySelector('#cover');
+const coverWipe = cover.querySelector('.cover__wipe');
 let invitationOpened = false;
+let invitationReady = false;
+
+function finishOpening() {
+  if (invitationReady) return;
+  invitationReady = true;
+  cover.classList.add('is-complete');
+  cover.setAttribute('aria-hidden', 'true');
+  cover.removeAttribute('tabindex');
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => body.classList.remove('locked'));
+  });
+}
+
+function holdOpeningScroll(event) {
+  if (body.classList.contains('locked')) event.preventDefault();
+}
+
+document.addEventListener('touchmove', holdOpeningScroll, { passive: false });
+document.addEventListener('wheel', holdOpeningScroll, { passive: false });
 
 function openInvitation() {
   if (invitationOpened) return;
@@ -8,12 +28,12 @@ function openInvitation() {
   cover.classList.add('opening');
   cover.setAttribute('aria-disabled', 'true');
   window.setTimeout(() => cover.classList.add('revealing'), 720);
-  window.setTimeout(() => {
-    body.classList.remove('locked');
-    cover.setAttribute('aria-hidden', 'true');
-    cover.removeAttribute('tabindex');
-  }, 1220);
+  window.setTimeout(finishOpening, 1400);
 }
+
+coverWipe.addEventListener('animationend', (event) => {
+  if (event.animationName === 'coverWipe') finishOpening();
+});
 
 cover.addEventListener('click', openInvitation);
 cover.addEventListener('keydown', (event) => {

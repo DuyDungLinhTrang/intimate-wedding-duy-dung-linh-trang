@@ -14,7 +14,7 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; background: var(--cream); }
 body { margin: 0; color: var(--ink); background: var(--cream); font-family: var(--sans); overflow-x: hidden; }
-body.locked { height: 100vh; overflow: hidden; }
+body.locked { height: 100svh; overflow: hidden; overscroll-behavior: none; touch-action: none; }
 button { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 img { display: block; width: 100%; }
@@ -26,7 +26,6 @@ p { text-wrap: pretty; }
   position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
   min-height: 100svh; color: var(--ink); background: var(--cream); overflow: hidden;
   cursor: pointer; contain: paint; touch-action: manipulation;
-  transition: visibility 0s 1.26s;
 }
 .cover:focus-visible { outline: 2px solid var(--coral); outline-offset: -8px; }
 .cover__wipe { position: absolute; inset: 0; z-index: 2; background: var(--coral); transform: translate3d(0, 101%, 0); will-change: transform; }
@@ -43,7 +42,8 @@ p { text-wrap: pretty; }
 .begin__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 0 rgba(238,116,70,.4); animation: pulse 2s infinite; }
 .cover.opening .cover__content { animation: coverCopy .68s cubic-bezier(.4,0,.2,1) forwards; }
 .cover.opening .cover__wipe { animation: coverWipe 1.22s cubic-bezier(.7,0,.2,1) forwards; }
-.cover.opening { visibility: hidden; pointer-events: none; }
+.cover.opening { pointer-events: none; }
+.cover.is-complete { visibility: hidden; pointer-events: none; }
 .cover.opening.revealing { background: transparent; }
 .cover.opening::before { opacity: 0; transition: opacity .2s ease; }
 
