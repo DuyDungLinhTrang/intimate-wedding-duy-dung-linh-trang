@@ -14,7 +14,17 @@
   </head>
   <body class="locked">
     <div class="cover" id="cover" role="button" tabindex="0" aria-label="Open Duy Dũng and Linh Trang's invitation">
-      <div class="cover__wipe" aria-hidden="true"></div>
+      <div class="cover__wipe" aria-hidden="true">
+        <div class="cover-vinyl">
+          <span class="cover-vinyl__record">
+            <span class="cover-vinyl__shine"></span>
+          </span>
+          <span class="cover-vinyl__label">
+            <img src="assets/logo.png" alt="" />
+          </span>
+          <span class="cover-vinyl__needle"></span>
+        </div>
+      </div>
       <div class="cover__content">
         <img class="brand-logo brand-logo--cover" src="assets/logo.png" alt="Linh Trang and Duy Dũng monogram" />
         <p class="eyebrow">An intimate celebration</p>
@@ -178,7 +188,7 @@
           <p class="eyebrow">A note on attire</p>
           <h2 id="dress-title">Dress Code</h2>
           <p>We would love for our celebration to feel warm, intimate, and beautifully harmonious. Please join us in one of the suggested tones below.</p>
-          <small>Kindly avoid bright neon colors and pure black outfits.</small>
+          <small><i>Kindly avoid bright neon colors.</i><br /><i>And gentlemen, when in doubt, a black and white outfit is always a classic, foolproof choice.</i></small>
         </div>
         <div class="swatches" aria-label="Suggested dress code colors">
           <div class="swatch reveal" style="--swatch:#dca441"><span></span><p>Golden<br />Ochre</p></div>
@@ -205,6 +215,18 @@
       <button id="lightbox-close" aria-label="Close photograph">Close ×</button>
       <img id="lightbox-image" alt="" />
     </dialog>
+
+    <audio id="background-music" src="assets/luther.mp3" preload="metadata" loop></audio>
+    <button class="music-toggle" id="music-toggle" type="button" aria-label="Pause music" aria-pressed="true">
+      <span class="music-toggle__platter" aria-hidden="true">
+        <span class="music-toggle__record">
+          <span class="music-toggle__shine"></span>
+          <span class="music-toggle__spindle"></span>
+        </span>
+        <span class="music-toggle__logo"><img src="assets/logo.png" alt="" /></span>
+      </span>
+      <span class="music-toggle__tonearm" aria-hidden="true"><i></i></span>
+    </button>
 
     <script src="script.js"></script>
   </body>

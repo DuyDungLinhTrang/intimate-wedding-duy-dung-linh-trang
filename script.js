@@ -1,8 +1,33 @@
 const body = document.body;
 const cover = document.querySelector('#cover');
 const coverWipe = cover.querySelector('.cover__wipe');
+const backgroundMusic = document.querySelector('#background-music');
+const musicToggle = document.querySelector('#music-toggle');
 let invitationOpened = false;
 let invitationReady = false;
+
+function updateMusicButton(isPlaying) {
+  musicToggle.classList.toggle('is-playing', isPlaying);
+  musicToggle.setAttribute('aria-pressed', String(isPlaying));
+  musicToggle.setAttribute('aria-label', isPlaying ? 'Pause music' : 'Play music');
+}
+
+async function playMusic() {
+  try {
+    await backgroundMusic.play();
+    updateMusicButton(true);
+  } catch {
+    updateMusicButton(false);
+  }
+}
+
+musicToggle.addEventListener('click', () => {
+  if (backgroundMusic.paused) playMusic();
+  else {
+    backgroundMusic.pause();
+    updateMusicButton(false);
+  }
+});
 
 function finishOpening() {
   if (invitationReady) return;
@@ -25,10 +50,12 @@ document.addEventListener('wheel', holdOpeningScroll, { passive: false });
 function openInvitation() {
   if (invitationOpened) return;
   invitationOpened = true;
+  musicToggle.classList.add('is-ready');
+  playMusic();
   cover.classList.add('opening');
   cover.setAttribute('aria-disabled', 'true');
-  window.setTimeout(() => cover.classList.add('revealing'), 720);
-  window.setTimeout(finishOpening, 1400);
+  window.setTimeout(() => cover.classList.add('revealing'), 1210);
+  window.setTimeout(finishOpening, 4300);
 }
 
 coverWipe.addEventListener('animationend', (event) => {
