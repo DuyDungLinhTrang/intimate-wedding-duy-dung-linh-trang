@@ -13,6 +13,7 @@
     <title>Duy Dũng & Linh Trang — September 26, 2026</title>
   </head>
   <body class="locked">
+    <div class="scroll-progress" aria-hidden="true"><span id="scroll-progress-bar"></span></div>
     <div class="cover" id="cover" role="button" tabindex="0" aria-label="Open Duy Dũng and Linh Trang's invitation">
       <div class="cover__wipe" aria-hidden="true">
         <div class="cover-vinyl">
@@ -53,8 +54,8 @@
         <div class="invitation__copy reveal">
           <p class="eyebrow coral">One more evening, together</p>
           <h2>Warmly invited.</h2>
-          <p class="lead">Following our wedding on September 20, we warmly invite you to join us for an intimate celebration.</p>
-          <p>Come as you are, stay for the memories, and share a relaxed evening of love, laughter, and heartfelt conversation with us.</p>
+          <p class="lead" id="typed-invitation-lead">Following our wedding on September 20, we warmly invite you to join us for an intimate celebration.</p>
+          <p id="typed-invitation">Come as you are, stay for the memories, and share a relaxed evening of love, laughter, and heartfelt conversation with us.</p>
         </div>
       </section>
 
@@ -150,6 +151,7 @@
           </div>
           <p class="gallery__hint">Swipe to explore</p>
         </div>
+        <div class="gallery-stage">
         <div class="gallery__track" id="gallery-track" tabindex="0" aria-label="Wedding photo gallery">
           <button class="photo-card" data-full="assets/gallery-01.webp" aria-label="Open photo 1"><img src="assets/gallery-01.webp" alt="The couple holding hands" loading="lazy" decoding="async" /></button>
           <button class="photo-card" data-full="assets/gallery-02.webp" aria-label="Open photo 2"><img src="assets/gallery-02.webp" alt="The couple laughing together" loading="lazy" decoding="async" /></button>
@@ -178,8 +180,8 @@
         </div>
         <div class="gallery__controls reveal">
           <button id="gallery-prev" type="button" aria-label="Previous photograph">←</button>
-          <span id="gallery-count">01 / 24</span>
           <button id="gallery-next" type="button" aria-label="Next photograph">→</button>
+        </div>
         </div>
       </section>
 
@@ -231,4 +233,3 @@
     <script src="script.js"></script>
   </body>
 </html>
-

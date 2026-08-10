@@ -5,6 +5,8 @@ const backgroundMusic = document.querySelector('#background-music');
 const musicToggle = document.querySelector('#music-toggle');
 let invitationOpened = false;
 let invitationReady = false;
+let musicFadeFrame;
+let resumeMusicOnReturn = false;
 
 function updateMusicButton(isPlaying) {
   musicToggle.classList.toggle('is-playing', isPlaying);
@@ -12,20 +14,51 @@ function updateMusicButton(isPlaying) {
   musicToggle.setAttribute('aria-label', isPlaying ? 'Pause music' : 'Play music');
 }
 
+function fadeMusic(targetVolume, duration, onComplete) {
+  window.cancelAnimationFrame(musicFadeFrame);
+  const startingVolume = backgroundMusic.volume;
+  const startedAt = performance.now();
+
+  function updateVolume(timestamp) {
+    const progress = Math.min((timestamp - startedAt) / duration, 1);
+    backgroundMusic.volume = startingVolume + (targetVolume - startingVolume) * progress;
+    if (progress < 1) musicFadeFrame = window.requestAnimationFrame(updateVolume);
+    else if (onComplete) onComplete();
+  }
+
+  musicFadeFrame = window.requestAnimationFrame(updateVolume);
+}
+
 async function playMusic() {
   try {
+    backgroundMusic.volume = 0;
     await backgroundMusic.play();
     updateMusicButton(true);
+    fadeMusic(1, 1800);
   } catch {
     updateMusicButton(false);
   }
 }
 
-musicToggle.addEventListener('click', () => {
-  if (backgroundMusic.paused) playMusic();
-  else {
+function pauseMusic(fadeDuration = 500) {
+  fadeMusic(0, fadeDuration, () => {
     backgroundMusic.pause();
     updateMusicButton(false);
+  });
+}
+
+musicToggle.addEventListener('click', () => {
+  if (backgroundMusic.paused) playMusic();
+  else pauseMusic(650);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    resumeMusicOnReturn = !backgroundMusic.paused;
+    if (resumeMusicOnReturn) pauseMusic(350);
+  } else if (resumeMusicOnReturn) {
+    resumeMusicOnReturn = false;
+    playMusic();
   }
 });
 
@@ -35,6 +68,7 @@ function finishOpening() {
   cover.classList.add('is-complete');
   cover.setAttribute('aria-hidden', 'true');
   cover.removeAttribute('tabindex');
+  body.classList.add('invitation-ready');
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => body.classList.remove('locked'));
   });
@@ -48,14 +82,19 @@ document.addEventListener('touchmove', holdOpeningScroll, { passive: false });
 document.addEventListener('wheel', holdOpeningScroll, { passive: false });
 
 function openInvitation() {
-  if (invitationOpened) return;
+  if (invitationOpened) {
+    finishOpening();
+    return;
+  }
   invitationOpened = true;
   musicToggle.classList.add('is-ready');
   playMusic();
   cover.classList.add('opening');
   cover.setAttribute('aria-disabled', 'true');
-  window.setTimeout(() => cover.classList.add('revealing'), 1210);
-  window.setTimeout(finishOpening, 4300);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const openingDuration = reducedMotion ? 1200 : 4000;
+  window.setTimeout(() => cover.classList.add('revealing'), reducedMotion ? 400 : 1210);
+  window.setTimeout(finishOpening, openingDuration + 300);
 }
 
 coverWipe.addEventListener('animationend', (event) => {
@@ -81,6 +120,96 @@ const revealObserver = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
 
+const imageMotionObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('is-in-view');
+      imageMotionObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.18 });
+
+document.querySelectorAll('.cinematic, .finale').forEach((section) => imageMotionObserver.observe(section));
+
+const typedInvitationParagraphs = [
+  document.querySelector('#typed-invitation-lead'),
+  document.querySelector('#typed-invitation')
+].map((element) => {
+  const text = element.textContent.trim();
+  element.style.minHeight = `${element.getBoundingClientRect().height}px`;
+  element.setAttribute('aria-label', text);
+  element.textContent = '';
+  element.classList.add('typewriter');
+  return { element, text };
+});
+let typingStarted = false;
+let typingFinished = false;
+let typingCancelled = false;
+
+function finishTypedInvitation() {
+  typingCancelled = true;
+  typingFinished = true;
+  typedInvitationParagraphs.forEach(({ element, text }) => {
+    element.textContent = text;
+    element.classList.remove('is-typing');
+  });
+}
+
+function typeParagraph({ element, text }, duration = 2500) {
+  return new Promise((resolve) => {
+    let startedAt;
+    element.classList.add('is-typing');
+
+    function typeNextFrame(timestamp) {
+      if (typingCancelled) {
+        element.textContent = text;
+        element.classList.remove('is-typing');
+        resolve();
+        return;
+      }
+      if (!startedAt) startedAt = timestamp;
+      const progress = Math.min((timestamp - startedAt) / duration, 1);
+      const visibleCharacters = Math.floor(progress * text.length);
+      element.textContent = text.slice(0, visibleCharacters);
+
+      if (progress < 1) {
+        window.requestAnimationFrame(typeNextFrame);
+      } else {
+        element.classList.remove('is-typing');
+        resolve();
+      }
+    }
+
+    window.requestAnimationFrame(typeNextFrame);
+  });
+}
+
+const typewriterObserver = new IntersectionObserver(async ([entry], observer) => {
+  if (!entry.isIntersecting) return;
+
+  observer.unobserve(entry.target);
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    finishTypedInvitation();
+    return;
+  }
+
+  typingStarted = true;
+  for (const paragraph of typedInvitationParagraphs) {
+    await typeParagraph(paragraph, 2500);
+    if (typingCancelled) break;
+  }
+  typingFinished = true;
+}, { threshold: 0.55 });
+
+typewriterObserver.observe(document.querySelector('.invitation__copy'));
+
+window.addEventListener('scroll', () => {
+  if (!typingStarted || typingFinished) return;
+  const invitationBounds = document.querySelector('.invitation').getBoundingClientRect();
+  if (invitationBounds.bottom < 80 || invitationBounds.top > window.innerHeight - 80) finishTypedInvitation();
+}, { passive: true });
+
 const venue = document.querySelector('.venue');
 const venueSlides = [...document.querySelectorAll('.venue__slide')];
 let venueIndex = 0;
@@ -94,7 +223,7 @@ function showNextVenueSlide() {
 
 function startVenueSlideshow() {
   if (venueTimer) return;
-  venueTimer = window.setInterval(showNextVenueSlide, 3000);
+  venueTimer = window.setInterval(showNextVenueSlide, 4800);
 }
 
 function stopVenueSlideshow() {
@@ -134,13 +263,16 @@ document.querySelector('#save-date').addEventListener('click', () => {
 
 const gallery = document.querySelector('#gallery-track');
 const cards = [...document.querySelectorAll('.photo-card')];
-const galleryCount = document.querySelector('#gallery-count');
+cards.forEach((card, index) => { card.dataset.galleryIndex = index; });
+cards.forEach((card) => gallery.append(card.cloneNode(true)));
+cards.slice().reverse().forEach((card) => gallery.prepend(card.cloneNode(true)));
+const galleryCards = [...gallery.querySelectorAll('.photo-card')];
 
-function currentGalleryIndex() {
+function currentGalleryCardIndex() {
   const center = gallery.scrollLeft + gallery.clientWidth / 2;
   let closest = 0;
   let distance = Infinity;
-  cards.forEach((card, index) => {
+  galleryCards.forEach((card, index) => {
     const cardCenter = card.offsetLeft + card.offsetWidth / 2;
     const nextDistance = Math.abs(cardCenter - center);
     if (nextDistance < distance) {
@@ -152,17 +284,35 @@ function currentGalleryIndex() {
 }
 
 function updateGallery() {
-  const index = currentGalleryIndex();
-  cards.forEach((card, cardIndex) => card.classList.toggle('is-center', index === cardIndex));
-  galleryCount.textContent = `${String(index + 1).padStart(2, '0')} / ${String(cards.length).padStart(2, '0')}`;
+  const index = currentGalleryCardIndex();
+  galleryCards.forEach((card, cardIndex) => card.classList.toggle('is-center', index === cardIndex));
 }
 
 function moveGallery(direction) {
-  const target = Math.max(0, Math.min(cards.length - 1, currentGalleryIndex() + direction));
-  cards[target].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  const targetIndex = (currentGalleryCardIndex() + direction + galleryCards.length) % galleryCards.length;
+  const target = galleryCards[targetIndex];
+  gallery.scrollTo({
+    left: target.offsetLeft - (gallery.clientWidth - target.offsetWidth) / 2,
+    behavior: 'smooth'
+  });
 }
 
-gallery.addEventListener('scroll', () => requestAnimationFrame(updateGallery), { passive: true });
+let galleryScrollTimer;
+gallery.addEventListener('scroll', () => {
+  requestAnimationFrame(updateGallery);
+  window.clearTimeout(galleryScrollTimer);
+  galleryScrollTimer = window.setTimeout(() => {
+    const index = currentGalleryCardIndex();
+    let equivalentIndex = index;
+    if (index < cards.length) equivalentIndex += cards.length;
+    if (index >= cards.length * 2) equivalentIndex -= cards.length;
+    if (equivalentIndex !== index) {
+      const target = galleryCards[equivalentIndex];
+      gallery.scrollLeft = target.offsetLeft - (gallery.clientWidth - target.offsetWidth) / 2;
+      updateGallery();
+    }
+  }, 120);
+}, { passive: true });
 gallery.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight') moveGallery(1);
   if (event.key === 'ArrowLeft') moveGallery(-1);
@@ -170,16 +320,48 @@ gallery.addEventListener('keydown', (event) => {
 document.querySelector('#gallery-prev').addEventListener('click', () => moveGallery(-1));
 document.querySelector('#gallery-next').addEventListener('click', () => moveGallery(1));
 window.addEventListener('resize', updateGallery);
-updateGallery();
+window.requestAnimationFrame(() => {
+  const startingCard = galleryCards[cards.length + 10];
+  gallery.scrollLeft = startingCard.offsetLeft - (gallery.clientWidth - startingCard.offsetWidth) / 2;
+  updateGallery();
+});
 
 const lightbox = document.querySelector('#lightbox');
 const lightboxImage = document.querySelector('#lightbox-image');
-cards.forEach((card) => card.addEventListener('click', () => {
+gallery.addEventListener('click', (event) => {
+  const card = event.target.closest('.photo-card');
+  if (!card) return;
   lightboxImage.src = card.dataset.full;
   lightboxImage.alt = card.querySelector('img').alt;
   lightbox.showModal();
-}));
+});
 document.querySelector('#lightbox-close').addEventListener('click', () => lightbox.close());
 lightbox.addEventListener('click', (event) => {
   if (event.target === lightbox) lightbox.close();
 });
+lightbox.addEventListener('cancel', () => lightbox.close());
+
+let lightboxTouchStartY = 0;
+lightbox.addEventListener('touchstart', (event) => {
+  lightboxTouchStartY = event.changedTouches[0].clientY;
+}, { passive: true });
+lightbox.addEventListener('touchend', (event) => {
+  const distance = event.changedTouches[0].clientY - lightboxTouchStartY;
+  if (distance > 90) lightbox.close();
+}, { passive: true });
+
+const scrollProgressBar = document.querySelector('#scroll-progress-bar');
+let progressFrame;
+
+function updateScrollProgress() {
+  const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = scrollableHeight > 0 ? window.scrollY / scrollableHeight : 0;
+  scrollProgressBar.style.transform = `scaleY(${Math.min(Math.max(progress, 0), 1)})`;
+  progressFrame = undefined;
+}
+
+window.addEventListener('scroll', () => {
+  if (!progressFrame) progressFrame = window.requestAnimationFrame(updateScrollProgress);
+}, { passive: true });
+window.addEventListener('resize', updateScrollProgress);
+updateScrollProgress();
