@@ -9,8 +9,6 @@ let musicFadeFrame;
 let resumeMusicOnReturn = false;
 
 const progressiveImages = [...document.querySelectorAll('img[loading="lazy"]:not(.photo-card img)')];
-const progressiveImageQueue = [];
-let progressiveImageLoading = false;
 
 progressiveImages.forEach((image) => {
   const source = image.getAttribute('src');
@@ -19,31 +17,11 @@ progressiveImages.forEach((image) => {
   image.removeAttribute('src');
 });
 
-async function processProgressiveImageQueue() {
-  if (progressiveImageLoading) return;
-  progressiveImageLoading = true;
-
-  while (progressiveImageQueue.length) {
-    const image = progressiveImageQueue.shift();
-    const source = image.dataset.progressiveSrc;
-    if (!source) continue;
-
-    await new Promise((resolve) => {
-      image.addEventListener('load', resolve, { once: true });
-      image.addEventListener('error', resolve, { once: true });
-      image.src = source;
-      image.removeAttribute('data-progressive-src');
-    });
-  }
-
-  progressiveImageLoading = false;
-}
-
-function enqueueProgressiveImage(image) {
-  if (!image.dataset.progressiveSrc || image.dataset.progressiveQueued) return;
-  image.dataset.progressiveQueued = 'true';
-  progressiveImageQueue.push(image);
-  processProgressiveImageQueue();
+function loadProgressiveImage(image) {
+  const source = image.dataset.progressiveSrc;
+  if (!source) return;
+  image.src = source;
+  image.removeAttribute('data-progressive-src');
 }
 
 const progressiveImageObserver = new IntersectionObserver((entries, observer) => {
@@ -54,10 +32,10 @@ const progressiveImageObserver = new IntersectionObserver((entries, observer) =>
       return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     })
     .forEach((entry) => {
-      enqueueProgressiveImage(entry.target);
+      loadProgressiveImage(entry.target);
       observer.unobserve(entry.target);
     });
-}, { rootMargin: '60% 0px', threshold: 0.01 });
+}, { rootMargin: '140% 0px', threshold: 0.01 });
 
 progressiveImages.forEach((image) => progressiveImageObserver.observe(image));
 
@@ -336,6 +314,23 @@ cards.forEach((card) => gallery.append(card.cloneNode(true)));
 cards.slice().reverse().forEach((card) => gallery.prepend(card.cloneNode(true)));
 const galleryCards = [...gallery.querySelectorAll('.photo-card')];
 
+function loadGalleryCard(card) {
+  const image = card.querySelector('img[data-src]');
+  if (!image) return;
+  image.src = image.dataset.src;
+  image.removeAttribute('data-src');
+}
+
+const gallerySectionObserver = new IntersectionObserver(([entry], observer) => {
+  if (!entry.isIntersecting) return;
+  galleryCards
+    .filter((card) => initiallyLoadedGalleryIndexes.has(Number(card.dataset.galleryIndex)))
+    .forEach(loadGalleryCard);
+  observer.unobserve(entry.target);
+}, { rootMargin: '120% 0px', threshold: 0.01 });
+
+gallerySectionObserver.observe(document.querySelector('#gallery'));
+
 const galleryImageObserver = new IntersectionObserver((entries, observer) => {
   entries
     .filter((entry) => entry.isIntersecting)
@@ -348,14 +343,10 @@ const galleryImageObserver = new IntersectionObserver((entries, observer) => {
       return aDistance - bDistance;
     })
     .forEach((entry) => {
-      const image = entry.target.querySelector('img[data-src]');
-      if (image) {
-        image.src = image.dataset.src;
-        image.removeAttribute('data-src');
-      }
+      loadGalleryCard(entry.target);
       observer.unobserve(entry.target);
     });
-}, { root: gallery, rootMargin: '0px 12%', threshold: 0.01 });
+}, { root: gallery, rootMargin: '0px 75%', threshold: 0.01 });
 
 galleryCards.forEach((card) => {
   if (card.querySelector('img[data-src]')) galleryImageObserver.observe(card);
