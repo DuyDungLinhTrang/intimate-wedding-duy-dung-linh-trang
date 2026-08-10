@@ -39,6 +39,22 @@ const progressiveImageObserver = new IntersectionObserver((entries, observer) =>
 
 progressiveImages.forEach((image) => progressiveImageObserver.observe(image));
 
+const venueProgressiveImages = [...document.querySelectorAll('.venue__slide img')];
+venueProgressiveImages
+  .filter((image) => image.closest('.venue__slide').classList.contains('is-active'))
+  .forEach(loadProgressiveImage);
+
+const venuePreloadObserver = new IntersectionObserver(([entry], observer) => {
+  if (!entry.isIntersecting) return;
+  venueProgressiveImages.forEach((image) => {
+    loadProgressiveImage(image);
+    progressiveImageObserver.unobserve(image);
+  });
+  observer.unobserve(entry.target);
+}, { rootMargin: '150% 0px', threshold: 0.01 });
+
+venuePreloadObserver.observe(document.querySelector('.venue'));
+
 function updateMusicButton(isPlaying) {
   musicToggle.classList.toggle('is-playing', isPlaying);
   musicToggle.setAttribute('aria-pressed', String(isPlaying));
