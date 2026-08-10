@@ -8,6 +8,59 @@ let invitationReady = false;
 let musicFadeFrame;
 let resumeMusicOnReturn = false;
 
+const progressiveImages = [...document.querySelectorAll('img[loading="lazy"]:not(.photo-card img)')];
+const progressiveImageQueue = [];
+let progressiveImageLoading = false;
+
+progressiveImages.forEach((image) => {
+  const source = image.getAttribute('src');
+  if (!source) return;
+  image.dataset.progressiveSrc = source;
+  image.removeAttribute('src');
+});
+
+async function processProgressiveImageQueue() {
+  if (progressiveImageLoading) return;
+  progressiveImageLoading = true;
+
+  while (progressiveImageQueue.length) {
+    const image = progressiveImageQueue.shift();
+    const source = image.dataset.progressiveSrc;
+    if (!source) continue;
+
+    await new Promise((resolve) => {
+      image.addEventListener('load', resolve, { once: true });
+      image.addEventListener('error', resolve, { once: true });
+      image.src = source;
+      image.removeAttribute('data-progressive-src');
+    });
+  }
+
+  progressiveImageLoading = false;
+}
+
+function enqueueProgressiveImage(image) {
+  if (!image.dataset.progressiveSrc || image.dataset.progressiveQueued) return;
+  image.dataset.progressiveQueued = 'true';
+  progressiveImageQueue.push(image);
+  processProgressiveImageQueue();
+}
+
+const progressiveImageObserver = new IntersectionObserver((entries, observer) => {
+  entries
+    .filter((entry) => entry.isIntersecting)
+    .sort((a, b) => {
+      const position = a.target.compareDocumentPosition(b.target);
+      return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    })
+    .forEach((entry) => {
+      enqueueProgressiveImage(entry.target);
+      observer.unobserve(entry.target);
+    });
+}, { rootMargin: '60% 0px', threshold: 0.01 });
+
+progressiveImages.forEach((image) => progressiveImageObserver.observe(image));
+
 function updateMusicButton(isPlaying) {
   musicToggle.classList.toggle('is-playing', isPlaying);
   musicToggle.setAttribute('aria-pressed', String(isPlaying));
@@ -263,10 +316,50 @@ document.querySelector('#save-date').addEventListener('click', () => {
 
 const gallery = document.querySelector('#gallery-track');
 const cards = [...document.querySelectorAll('.photo-card')];
-cards.forEach((card, index) => { card.dataset.galleryIndex = index; });
+const initiallyLoadedGalleryIndexes = new Set([9, 10, 11]);
+
+cards.forEach((card, index) => {
+  const image = card.querySelector('img');
+  const source = image.getAttribute('src');
+  card.dataset.galleryIndex = index;
+  image.dataset.src = source;
+  image.removeAttribute('src');
+
+  if (initiallyLoadedGalleryIndexes.has(index)) {
+    image.loading = 'eager';
+    image.fetchPriority = index === 10 ? 'high' : 'auto';
+  } else {
+    image.loading = 'lazy';
+  }
+});
 cards.forEach((card) => gallery.append(card.cloneNode(true)));
 cards.slice().reverse().forEach((card) => gallery.prepend(card.cloneNode(true)));
 const galleryCards = [...gallery.querySelectorAll('.photo-card')];
+
+const galleryImageObserver = new IntersectionObserver((entries, observer) => {
+  entries
+    .filter((entry) => entry.isIntersecting)
+    .sort((a, b) => {
+      const galleryCenter = gallery.getBoundingClientRect().left + gallery.clientWidth / 2;
+      const aBounds = a.target.getBoundingClientRect();
+      const bBounds = b.target.getBoundingClientRect();
+      const aDistance = Math.abs(aBounds.left + aBounds.width / 2 - galleryCenter);
+      const bDistance = Math.abs(bBounds.left + bBounds.width / 2 - galleryCenter);
+      return aDistance - bDistance;
+    })
+    .forEach((entry) => {
+      const image = entry.target.querySelector('img[data-src]');
+      if (image) {
+        image.src = image.dataset.src;
+        image.removeAttribute('data-src');
+      }
+      observer.unobserve(entry.target);
+    });
+}, { root: gallery, rootMargin: '0px 12%', threshold: 0.01 });
+
+galleryCards.forEach((card) => {
+  if (card.querySelector('img[data-src]')) galleryImageObserver.observe(card);
+});
 
 function currentGalleryCardIndex() {
   const center = gallery.scrollLeft + gallery.clientWidth / 2;
